@@ -29,6 +29,6 @@ Final project for Master's level NoSQL database systems class. Content will be a
       birthYear: int
       birthCountry: string
       ...
-      }
+     }
      ```
      
