@@ -89,17 +89,18 @@ Final project for Master's level NoSQL database systems class. Content will be a
 
 ## 3. Relationship types & properties
   **A. Player <-> TeamSeason: performance relationships**
-    1. Batting performance
-       ```
-       (:Player)-[bp:BATTED_FOR]->(:TeamSeason)
-       ```
-       bp: all stats that are specific to a player/team/season
-       year
-       stint
-       G, AB, R, H, 2B, HR, RBI, SB, CS, BB, SO, IBB, HBP, SH, SF
-    2. Pitching performance
-       ```
-       (:Player)-[pp:PITCHED_FOR]->(:TeamSeason)
-       ```
-       pp: all stats that are specific to a player/team/season
-       G, GS, IPouts, W, L, SV, ER, SO, BB, H, HR
+      1. Batting performance
+         ```
+         (:Player)-[bp:BATTED_FOR]->(:TeamSeason)
+         ```
+         bp: all stats that are specific to a player/team/season
+         year
+         stint
+         G, AB, R, H, 2B, HR, RBI, SB, CS, BB, SO, IBB, HBP, SH, SF
+    
+      2. Pitching performance
+         ```
+         (:Player)-[pp:PITCHED_FOR]->(:TeamSeason)
+         ```
+         pp: all stats that are specific to a player/team/season
+         G, GS, IPouts, W, L, SV, ER, SO, BB, H, HR
