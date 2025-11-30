@@ -31,4 +31,58 @@ Final project for Master's level NoSQL database systems class. Content will be a
       ...
      }
      ```
-     
+  2. Team Schema:
+     ```
+     Team {
+       teamID: string (unique)
+       name: string
+       league: string
+       location: string
+     }
+     ```
+  3. Season Schema:
+     ```
+     Season {
+       year: int
+     }
+     ```
+  4. TeamSeason Schema:
+     ```
+     TeamSeason {
+       (teamID, yearID) creates an id "BOS-2023"
+       wins: int
+       losses: int
+       division: string
+       rank: int
+       runs: int
+       homeRuns: int
+       attendance: int
+     }
+     ```
+  5. Park Schema:
+     ```
+     Park {
+       parkID: string (unique)
+       name: string
+       city: string
+       state: string
+       country: string
+     }
+     ```
+  6. Manager Schema:
+     ```
+     Manager {
+       managerID: string (unique)
+       name: string
+     }
+     ```
+  7. Game Schema:
+     ```
+     Game {
+       gameID: string (YYYYMMDD + teamID)
+       date: string
+       homeScore: int
+       awayScore: int
+       attendance: int
+     }
+     ```
