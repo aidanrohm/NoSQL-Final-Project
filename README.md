@@ -4,7 +4,7 @@ Final project for Master's level NoSQL database systems class. Content will be a
 ## Contents:
   1. Goals/Intent of Development
   2. Schema
-  3. Explanation
+  3. Relationship types & properties
   4. How-To Guide
 
 ## 1. Goals/Intent of Development
@@ -96,12 +96,10 @@ Final project for Master's level NoSQL database systems class. Content will be a
          year
          stint
          G, AB, R, H, 2B, HR, RBI, SB, CS, BB, SO, IBB, HBP, SH, SF
-    
     2. Pitching performance
          (:Player)-[pp:PITCHED_FOR]->(:TeamSeason)
          pp: all stats that are specific to a player/team/season
          G, GS, IPouts, W, L, SV, ER, SO, BB, H, HR
-
     3. Fielding performance
          (:Player)-[fp:FIELDED_FOR]->(:TeamSeason)
          fp: all stats that are specific to a player/team/season
@@ -109,6 +107,14 @@ Final project for Master's level NoSQL database systems class. Content will be a
   
   **B. Season <-> TeamSeason <-> Team**
     
-    ```
     (:Team)-[:PLAYED_IN_SEASON]->(:TeamSeason)-[:IN_SEASON]->(:Season)
-    ```
+
+  **C. Teammate relationships**
+
+    (:Player)-[:TEAMMATE_WITH]->(:Player)
+    properties include:
+      firstSeasonTogether
+      lastSeasonTogether
+      teams (list of shared teamIDs)
+      seasons (list of years)
+  
