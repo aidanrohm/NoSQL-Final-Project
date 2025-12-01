@@ -9,20 +9,21 @@ from neo4j import GraphDatabase
 # Use your actual DB name
 DB_NAME = "mlb"   # <-- keep or change if your database name is different
 
+
 class MLBApp:
     def __init__(self, uri: str, user: str, password: str):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
     def close(self):
         self.driver.close()
-    
+
     # Low-level helper
     def _run_query(self, query: str, **parameters):
         """Run a Cypher query and return the list of resulting records"""
         with self.driver.session(database=DB_NAME) as session:
             result = session.run(query, **parameters)
             return list(result)
-        
+
     # QUERY 1:
     # Players on a given team in a given season
     def players_on_team_in_year(self, team_id: str, year: int):
@@ -49,12 +50,12 @@ class MLBApp:
         if not records:
             print(f"\nNo players found for team {team_id} in {year}.\n")
             return
-        
+
         print(f"\nPlayers for team {team_id} in {year}:\n")
         for r in records:
             print(f"    {r['name']} ({r['playerID']})")
         print()
-    
+
     # QUERY 2:
     # Team season summary (wins, losses, HR, etc.)
     def team_season_summary(self, team_id: str, year: int):
@@ -98,7 +99,12 @@ class MLBApp:
 
     # QUERY 3:
     # Players who have played for multiple teams (database includes data from 2020-2024)
-    def multi_team_players(self, start_year: int = 2020, end_year: int = 2024, min_team_seasons: int = 2):
+    def multi_team_players(
+        self,
+        start_year: int = 2020,
+        end_year: int = 2024,
+        min_team_seasons: int = 2,
+    ):
         """
         Find the players who appeared for multiple TeamSeasons in the given year range.
 
@@ -122,16 +128,24 @@ class MLBApp:
             query,
             start_year=start_year,
             end_year=end_year,
-            min_team_seasons=min_team_seasons
+            min_team_seasons=min_team_seasons,
         )
 
         if not records:
-            print(f"\nNo players found with at least {min_team_seasons} team-seasons between {start_year}-{end_year}.\n")
+            print(
+                f"\nNo players found with at least {min_team_seasons} "
+                f"team-seasons between {start_year}-{end_year}.\n"
+            )
             return
 
-        print(f"\nPlayers with ≥ {min_team_seasons} team-seasons between {start_year}-{end_year}:\n")
+        print(
+            f"\nPlayers with ≥ {min_team_seasons} team-seasons between "
+            f"{start_year}-{end_year}:\n"
+        )
         for r in records:
-            print(f"  {r['player']} ({r['playerID']}) — {r['numTeamSeasons']} team-seasons")
+            print(
+                f"  {r['player']} ({r['playerID']}) — {r['numTeamSeasons']} team-seasons"
+            )
         print()
 
     # QUERY 4:
@@ -161,7 +175,7 @@ class MLBApp:
         if not records:
             print(f"\nNo data found for team {team_id} in {year}.\n")
             return
-        
+
         r = records[0]
         print(f"\nManagers and parks for {r['team']} in {r['year']}:\n")
 
@@ -215,7 +229,9 @@ class MLBApp:
         for i, node in enumerate(nodes):
             label_list = list(node.labels)
             label_str = ",".join(label_list)
-            name = node.get("name", node.get("playerID", node.get("teamID", "(no name)")))
+            name = node.get(
+                "name", node.get("playerID", node.get("teamID", "(no name)"))
+            )
             print(f"  Node {i}: {label_str} — {name}")
 
             if i < len(rels):
@@ -225,12 +241,15 @@ class MLBApp:
 
     # QUERY 6:
     # Which players have shared multiple teams and seasons together?
-    def players_with_shared_team_seasons(self, start_year: int = 2020, end_year: int = 2024, min_shared: int = 2):
+    def players_with_shared_team_seasons(
+        self, start_year: int = 2020, end_year: int = 2024, min_shared: int = 2
+    ):
         """
         Find pairs of players who have shared multiple TeamSeasons together.
 
         Graph pattern:
-        (p1:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)<-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2:Player)
+        (p1:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
+            <-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2:Player)
         """
 
         query = """
@@ -251,90 +270,125 @@ class MLBApp:
         """
 
         records = self._run_query(
-            query,
-            start_year=start_year,
-            end_year=end_year,
-            min_shared=min_shared
+            query, start_year=start_year, end_year=end_year, min_shared=min_shared
         )
 
         if not records:
-            print(f"\nNo player pairs found with at least {min_shared} shared team-seasons between {start_year}-{end_year}.\n")
+            print(
+                f"\nNo player pairs found with at least {min_shared} shared "
+                f"team-seasons between {start_year}-{end_year}.\n"
+            )
             return
 
-        print(f"\nPlayer pairs with ≥ {min_shared} shared team-seasons between {start_year}-{end_year}:\n")
+        print(
+            f"\nPlayer pairs with ≥ {min_shared} shared team-seasons "
+            f"between {start_year}-{end_year}:\n"
+        )
         for r in records:
             shared_desc = ", ".join(r["sharedTeamSeasons"])
-            print(f"  {r['player1']} ({r['playerID1']})  &  {r['player2']} ({r['playerID2']})")
-            print(f"    - Shared seasons: {r['numSharedSeasons']} [{shared_desc}]")
+            print(
+                f"  {r['player1']} ({r['playerID1']})  &  "
+                f"{r['player2']} ({r['playerID2']})"
+            )
+            print(
+                f"    - Shared seasons: {r['numSharedSeasons']} "
+                f"[{shared_desc}]"
+            )
         print()
 
     # QUERY 7:
-    # Show the ordered path of teams for a player, and other players who followed the same path.
-    def player_team_path_and_followers(self, player_id: str, start_year: int = 2020, end_year: int = 2024):
+    # Show the ordered path of teams for a player,
+    # and other players who followed the same path.
+    def player_team_path_and_followers(
+        self, player_id: str, start_year: int = 2020, end_year: int = 2024
+    ):
         """
-        For a given player, show the ordered sequence of teams they played for,
-        and list other players who followed the exact same path over the year range.
+        For a given player, show the ordered sequence of teams they played for
+        (between start_year and end_year), and list other players who followed
+        the exact same path over that window.
 
         Uses:
-        (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
+        (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)-[:IN_SEASON]->(s:Season)
         """
 
-        query = """
-        // Get the target player's ordered team sequence
-        MATCH (p:Player {playerID: $player_id})-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
-        WHERE ts.year >= $start_year AND ts.year <= $end_year
-        WITH p, ts
-        ORDER BY ts.year, ts.teamID
-        WITH p, collect(DISTINCT ts) AS ts_list
-        WITH p,
-             [ts IN ts_list | ts.teamID] AS team_seq,
-             [ts IN ts_list | ts.year]   AS year_seq
-
-        // Get other players' ordered team sequences over the same window
-        MATCH (other:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ots:TeamSeason)
-        WHERE other <> p AND ots.year >= $start_year AND ots.year <= $end_year
-        WITH p, team_seq, year_seq, other, ots
-        ORDER BY other.playerID, ots.year, ots.teamID
-        WITH p, team_seq, year_seq, other, collect(DISTINCT ots) AS other_ts_list
-        WITH p, team_seq, year_seq, other,
-             [ts IN other_ts_list | ts.teamID] AS other_team_seq
-        WHERE other_team_seq = team_seq
+        # First: get the target player's ordered team sequence
+        path_query = """
+        MATCH (p:Player {playerID: $player_id})
+              -[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
+              -[:IN_SEASON]->(s:Season)
+        WHERE s.year >= $start_year AND s.year <= $end_year
+        WITH p, s.year AS year, ts.teamID AS teamID
+        WITH p, year, collect(DISTINCT teamID)[0] AS teamID
+        ORDER BY year
         RETURN p.name AS player,
                p.playerID AS playerID,
-               team_seq AS teamSequence,
-               year_seq AS yearSequence,
-               collect(DISTINCT {name: other.name, playerID: other.playerID}) AS followers
+               collect(teamID) AS teamSequence,
+               collect(year) AS yearSequence
         """
 
-        records = self._run_query(
-            query,
+        path_records = self._run_query(
+            path_query,
             player_id=player_id,
             start_year=start_year,
-            end_year=end_year
+            end_year=end_year,
         )
 
-        if not records:
-            print(f"\nNo matching team path found for player {player_id} between {start_year}-{end_year}.\n")
+        if not path_records:
+            print(
+                f"\nNo matching team path found for player {player_id} "
+                f"between {start_year}-{end_year}.\n"
+            )
             return
 
-        r = records[0]
-        team_seq = r["teamSequence"]
-        year_seq = r["yearSequence"]
-        followers = r["followers"]
+        path_rec = path_records[0]
+        team_seq = path_rec["teamSequence"]
+        year_seq = path_rec["yearSequence"]
 
         if not team_seq:
-            print(f"\nPlayer {player_id} has no team history between {start_year}-{end_year}.\n")
+            print(
+                f"\nPlayer {player_id} has no team history between "
+                f"{start_year}-{end_year}.\n"
+            )
             return
 
-        print(f"\nOrdered team path for {r['player']} ({r['playerID']}) between {start_year}-{end_year}:\n")
-        steps = []
-        for team, year in zip(team_seq, year_seq):
-            steps.append(f"{year}:{team}")
+        # Second: find other players whose ordered team+year sequence matches
+        followers_query = """
+        MATCH (other:Player)
+        WHERE other.playerID <> $player_id
+        MATCH (other)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
+              -[:IN_SEASON]->(s:Season)
+        WHERE s.year >= $start_year AND s.year <= $end_year
+        WITH other, s.year AS year, ts.teamID AS teamID
+        WITH other, year, collect(DISTINCT teamID)[0] AS teamID
+        ORDER BY year
+        WITH other,
+             collect(teamID) AS teamSequence,
+             collect(year) AS yearSequence
+        WHERE teamSequence = $team_seq AND yearSequence = $year_seq
+        RETURN other.name AS name,
+               other.playerID AS playerID
+        ORDER BY name, playerID
+        """
+
+        follower_records = self._run_query(
+            followers_query,
+            player_id=player_id,
+            start_year=start_year,
+            end_year=end_year,
+            team_seq=team_seq,
+            year_seq=year_seq,
+        )
+
+        print(
+            f"\nOrdered team path for {path_rec['player']} "
+            f"({path_rec['playerID']}) between {start_year}-{end_year}:\n"
+        )
+        steps = [f"{y}:{t}" for y, t in zip(year_seq, team_seq)]
         print("  Path: " + "  ->  ".join(steps))
 
         print("\nPlayers who followed the same development path:")
-        if followers:
-            for f in followers:
+        if follower_records:
+            for f in follower_records:
                 print(f"  - {f['name']} ({f['playerID']})")
         else:
             print("  (no other players with the exact same path)")
@@ -350,13 +404,16 @@ class MLBApp:
         and M also managed TeamSeason T2 where Player B played.
 
         Pattern:
-        (p1)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1)<-[:MANAGED]-(m)-[:MANAGED]->(ts2)<-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2)
+        (p1)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1)<-[:MANAGED]-(m)
+             -[:MANAGED]->(ts2)<-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2)
         """
 
         query = """
-        MATCH (p1:Player {playerID: $p1})-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1:TeamSeason)
+        MATCH (p1:Player {playerID: $p1})
+              -[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1:TeamSeason)
               <-[:MANAGED]-(m:Manager)-[:MANAGED]->(ts2:TeamSeason)
-              <-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2:Player {playerID: $p2})
+              <-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-
+              (p2:Player {playerID: $p2})
         WHERE ts1 <> ts2
         RETURN DISTINCT
                p1.name AS player1,
@@ -371,14 +428,26 @@ class MLBApp:
 
         records = self._run_query(query, p1=player_id_1, p2=player_id_2)
         if not records:
-            print(f"\nNo manager-tree connection found between {player_id_1} and {player_id_2}.\n")
+            print(
+                f"\nNo manager-tree connection found between "
+                f"{player_id_1} and {player_id_2}.\n"
+            )
             return
 
-        print(f"\nManager tree connections between {player_id_1} and {player_id_2}:\n")
+        print(
+            f"\nManager tree connections between {player_id_1} "
+            f"and {player_id_2}:\n"
+        )
         for r in records:
             print(f"  Manager: {r['manager']}")
-            print(f"    - {r['player1']} ({r['playerID1']}) with {r['team1']} in {r['year1']}")
-            print(f"    - {r['player2']} ({r['playerID2']}) with {r['team2']} in {r['year2']}")
+            print(
+                f"    - {r['player1']} ({r['playerID1']}) "
+                f"with {r['team1']} in {r['year1']}"
+            )
+            print(
+                f"    - {r['player2']} ({r['playerID2']}) "
+                f"with {r['team2']} in {r['year2']}"
+            )
             print()
         print()
 
@@ -394,10 +463,18 @@ class MLBApp:
             print("2. Show team season summary")
             print("3. Find players who played for multiple teams (2020–2024)")
             print("4. Show managers and parks for a team & year")
-            print("5. How are two players connected by teammates? (shortest teammate path)")
+            print(
+                "5. How are two players connected by teammates? "
+                "(shortest teammate path)"
+            )
             print("6. Which player pairs shared multiple teams and seasons?")
-            print("7. Show a player's ordered team path and others with the same path")
-            print("8. Show manager-tree connections between two players")
+            print(
+                "7. Show a player's ordered team path and "
+                "others with the same path"
+            )
+            print(
+                "8. Show manager-tree connections between two players"
+            )
             print("q. Quit")
             choice = input("Select an option: ").strip().lower()
 
@@ -405,41 +482,64 @@ class MLBApp:
                 team_id = input("Enter teamID (e.g. 'BOS'): ").strip().upper()
                 year = int(input("Enter year (e.g. 2023): ").strip())
                 self.players_on_team_in_year(team_id, year)
+
             elif choice == "2":
                 team_id = input("Enter teamID (e.g. 'BOS'): ").strip().upper()
                 year = int(input("Enter year (e.g. 2023): ").strip())
                 self.team_season_summary(team_id, year)
+
             elif choice == "3":
                 start = 2020
                 end = 2024
-                min_ts = int(input("Minimum number of team-seasons (default 2): ") or "2")
-                self.multi_team_players(start_year=start, end_year=end, min_team_seasons=min_ts)
+                min_ts = int(
+                    input("Minimum number of team-seasons (default 2): ") or "2"
+                )
+                self.multi_team_players(
+                    start_year=start, end_year=end, min_team_seasons=min_ts
+                )
+
             elif choice == "4":
                 team_id = input("Enter teamID (e.g. 'BOS'): ").strip().upper()
                 year = int(input("Enter year (e.g. 2023): ").strip())
                 self.managers_and_parks_for_team_year(team_id, year)
+
             elif choice == "5":
                 p1 = input("Enter first playerID: ").strip()
                 p2 = input("Enter second playerID: ").strip()
                 self.shortest_teammate_path(p1, p2)
+
             elif choice == "6":
                 start = 2020
                 end = 2024
-                min_shared = int(input("Minimum shared team-seasons (default 2): ") or "2")
-                self.players_with_shared_team_seasons(start_year=start, end_year=end, min_shared=min_shared)
+                min_shared = int(
+                    input(
+                        "Minimum shared team-seasons (default 2): "
+                    )
+                    or "2"
+                )
+                self.players_with_shared_team_seasons(
+                    start_year=start, end_year=end, min_shared=min_shared
+                )
+
             elif choice == "7":
                 pid = input("Enter playerID: ").strip()
                 # Keeping 2020–2024 window consistent with the dataset you built
-                self.player_team_path_and_followers(pid, start_year=2020, end_year=2024)
+                self.player_team_path_and_followers(
+                    pid, start_year=2020, end_year=2024
+                )
+
             elif choice == "8":
                 p1 = input("Enter first playerID: ").strip()
                 p2 = input("Enter second playerID: ").strip()
                 self.manager_tree_connection(p1, p2)
+
             elif choice == "q":
                 print("Goodbye!")
                 break
+
             else:
                 print("Invalid option. Please try again.\n")
+
 
 if __name__ == "__main__":
     # CHANGE THESE TO MATCH YOUR PERSONAL ENVIRONMENT
@@ -452,6 +552,7 @@ if __name__ == "__main__":
         app.run()
     finally:
         app.close()
+
 
 
 
