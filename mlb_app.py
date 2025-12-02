@@ -545,7 +545,7 @@ if __name__ == "__main__":
     # CHANGE THESE TO MATCH YOUR PERSONAL ENVIRONMENT
     URI = "neo4j://127.0.0.1:7687"
     USER = "neo4j"
-    PASSWORD = "password"   # <-- your real password here
+    PASSWORD = "password"
 
     app = MLBApp(URI, USER, PASSWORD)
     try:
