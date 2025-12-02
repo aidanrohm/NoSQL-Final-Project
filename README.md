@@ -1,3 +1,4 @@
+# MLB Graph Database (2020-2024)
 *A NoSQL Final Project: Neo4j Graph Data Model of Modern MLB Seasons*
 
 This project creates a Neo4j graph database for **Major League Baseball** from the 2020-2024 seasons. The database includes players, teams, managers, parks, team-season performance, and individual player statistics. The graph structure of the database enables traversal based queries that are typically difficult to complete on a relational (SQL) model. These include but are not limited to teammate network paths, shared development histories, and manager-tree connections.
