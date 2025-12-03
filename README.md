@@ -182,6 +182,80 @@ Undirected, stored one way.
 ```
 (:TeamSeason)-[:PLAYED_HOME_GAMES_AT]->(:Park)
 ```
+#### Schema Diagram
+```mermaid
+erDiagram
+
+    PLAYER {
+        string  playerID PK
+        string  name
+        string  bats
+        string  throws
+        string  debut
+        string  finalGame
+        int     birthYear
+        string  birthCountry
+    }
+
+    TEAM {
+        string  teamID PK
+        string  name
+        string  league
+        string  location
+    }
+
+    SEASON {
+        int     year PK  "2020–2024"
+    }
+
+    TEAMSEASON {
+        string  id PK              "e.g. BOS-2023"
+        string  teamID             "team identifier"
+        int     year               "season year"
+        int     wins
+        int     losses
+        string  division
+        int     rank
+        int     runs
+        int     homeRuns
+        int     attendance
+    }
+
+    MANAGER {
+        string  managerID PK
+        string  name
+    }
+
+    PARK {
+        string  parkID PK
+        string  name
+        string  city
+        string  state
+        string  country
+        string  alias
+    }
+
+    %% === RELATIONSHIPS ===
+
+    %% Player performance per season
+    PLAYER      }o--o{    TEAMSEASON : BATTED_FOR
+    PLAYER      }o--o{    TEAMSEASON : PITCHED_FOR
+    PLAYER      }o--o{    TEAMSEASON : FIELDED_FOR
+
+    %% Team + Season structure
+    TEAM        ||--o{    TEAMSEASON : PLAYED_IN_SEASON
+    SEASON      ||--o{    TEAMSEASON : IN_SEASON
+
+    %% Managers to TeamSeason
+    MANAGER     ||--o{    TEAMSEASON : MANAGED
+
+    %% NEW RELATIONSHIP: Home ballpark
+    TEAMSEASON  ||--||    PARK : PLAYED_HOME_GAMES_AT
+
+    %% Player-to-player teammate network
+    PLAYER      }o--o{    PLAYER : TEAMMATE_WITH
+
+```
 ## Constraints & Indexes
 
 These ensure data integrity and faster queries:
