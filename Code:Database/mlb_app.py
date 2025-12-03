@@ -7,10 +7,11 @@
 from neo4j import GraphDatabase
 
 # Use your actual DB name
-DB_NAME = "mlb"   # <-- keep or change if your database name is different
+DB_NAME = "mlb"
 
 
 class MLBApp:
+    # Necessary constructor to connect to the database
     def __init__(self, uri: str, user: str, password: str):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
@@ -30,11 +31,12 @@ class MLBApp:
         """
         List players who played for a given team in a given year
 
-        Uses the following structure in *your* DB:
+        Uses this structure:
         (t:Team {teamID})-[:PLAYED_IN_SEASON]->(ts:TeamSeason {year})
         (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts)
         """
 
+        # Cypher query that is run with the user inputs
         query = """
         MATCH (t:Team {teamID: $team_id})-[:PLAYED_IN_SEASON]->(ts:TeamSeason)
         WHERE ts.year = $year
@@ -46,11 +48,13 @@ class MLBApp:
         ORDER BY name
         """
 
+        # Using the class to query the database
         records = self._run_query(query, team_id=team_id, year=year)
         if not records:
             print(f"\nNo players found for team {team_id} in {year}.\n")
             return
 
+        # Outputting the result to the user
         print(f"\nPlayers for team {team_id} in {year}:\n")
         for r in records:
             print(f"    {r['name']} ({r['playerID']})")
@@ -66,6 +70,7 @@ class MLBApp:
         {wins, losses, division, rank, runs, homeRuns, attendance, year}
         """
 
+        # Cypher query that is run with the user inputs
         query = """
         MATCH (t:Team {teamID: $team_id})-[:PLAYED_IN_SEASON]->(ts:TeamSeason)
         WHERE ts.year = $year
@@ -81,11 +86,13 @@ class MLBApp:
                ts.attendance   AS attendance
         """
 
+        # Using the class to query the database
         records = self._run_query(query, team_id=team_id, year=year)
         if not records:
             print(f"\nNo season summary found for team {team_id} in {year}.\n")
             return
 
+        # Printing the results to the user
         r = records[0]
         print(f"\nSeason summary for {r['team']} ({r['teamID']}) in {r['year']}:")
         print(f"  Division:   {r['division']}")
@@ -99,19 +106,15 @@ class MLBApp:
 
     # QUERY 3:
     # Players who have played for multiple teams (database includes data from 2020-2024)
-    def multi_team_players(
-        self,
-        start_year: int = 2020,
-        end_year: int = 2024,
-        min_team_seasons: int = 2,
-    ):
+    def multi_team_players(self, start_year: int = 2020, end_year: int = 2024, min_team_seasons: int = 2):
         """
         Find the players who appeared for multiple TeamSeasons in the given year range.
 
-        Graph pattern in your DB:
+        Uses this structure:
         (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason {year})
         """
 
+        # Cypher query that is run with the user inputs
         query = """
         MATCH (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
         WHERE ts.year >= $start_year AND ts.year <= $end_year
@@ -124,13 +127,10 @@ class MLBApp:
         LIMIT 50
         """
 
-        records = self._run_query(
-            query,
-            start_year=start_year,
-            end_year=end_year,
-            min_team_seasons=min_team_seasons,
-        )
+        # Using the class to query the database
+        records = self._run_query(query, start_year=start_year, end_year=end_year, min_team_seasons=min_team_seasons)
 
+        # User input error if the data does not exist
         if not records:
             print(
                 f"\nNo players found with at least {min_team_seasons} "
@@ -138,6 +138,7 @@ class MLBApp:
             )
             return
 
+        # Printing the results to the user
         print(
             f"\nPlayers with ≥ {min_team_seasons} team-seasons between "
             f"{start_year}-{end_year}:\n"
@@ -154,12 +155,13 @@ class MLBApp:
         """
         Shows managers and home parks for a team in a specific season.
 
-        Uses your structure:
+        Uses the structure:
         (t:Team)-[:PLAYED_IN_SEASON]->(ts:TeamSeason {year})
         (m:Manager)-[:MANAGED]->(ts)
         (ts)-[:PLAYED_HOME_GAMES_AT]->(pk:Park)
         """
 
+        # Cypher query that uses the users input
         query = """
         MATCH (t:Team {teamID: $team_id})-[:PLAYED_IN_SEASON]->(ts:TeamSeason)
         WHERE ts.year = $year
@@ -171,11 +173,13 @@ class MLBApp:
                collect(DISTINCT pk.name) AS parks
         """
 
+        # Using the class to query the database
         records = self._run_query(query, team_id=team_id, year=year)
         if not records:
             print(f"\nNo data found for team {team_id} in {year}.\n")
             return
 
+        # Printing the results to the user
         r = records[0]
         print(f"\nManagers and parks for {r['team']} in {r['year']}:\n")
 
@@ -187,14 +191,14 @@ class MLBApp:
             for m in managers:
                 print(f"    - {m}")
         else:
-            print("    (none recorded)")
+            print("    (none recorded)")    # Will only print if there is missing data
 
         print("\n  Home Parks:")
         if parks:
             for p in parks:
                 print(f"    - {p}")
         else:
-            print("    (none recorded)")
+            print("    (none recorded)")    # Will only print if there is missing data
         print()
 
     # QUERY 5:
@@ -204,10 +208,11 @@ class MLBApp:
         """
         Find the shortest "teammate" path between two players.
 
-        Your DB already has TEAMMATE_WITH relationships between players:
+        Uses the database structure that is already present:
         (p1:Player)-[:TEAMMATE_WITH]-(p2:Player)
         """
 
+        # Cypher query based on the user's input
         query = """
         MATCH (p1:Player {playerID: $p1}), (p2:Player {playerID: $p2})
         MATCH path = shortestPath(
@@ -216,15 +221,17 @@ class MLBApp:
         RETURN path
         """
 
+        # Using the class to query the database
         records = self._run_query(query, p1=player_id_1, p2=player_id_2)
         if not records:
-            print(f"\nNo path found between {player_id_1} and {player_id_2}.\n")
+            print(f"\nNo path found between {player_id_1} and {player_id_2}.\n")    # Only prints if there actually is not a path
             return
 
         path = records[0]["path"]
         nodes = list(path.nodes)
         rels = list(path.relationships)
 
+        # Printing the results to the user
         print(f"\nShortest teammate path between {player_id_1} and {player_id_2}:\n")
         for i, node in enumerate(nodes):
             label_list = list(node.labels)
@@ -247,11 +254,12 @@ class MLBApp:
         """
         Find pairs of players who have shared multiple TeamSeasons together.
 
-        Graph pattern:
+        Uses the structure:
         (p1:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
             <-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2:Player)
         """
 
+        # Cypher query based on the user input
         query = """
         MATCH (p1:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
               <-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2:Player)
@@ -269,10 +277,12 @@ class MLBApp:
         LIMIT 50
         """
 
+        # Using the class to query the database
         records = self._run_query(
             query, start_year=start_year, end_year=end_year, min_shared=min_shared
         )
 
+        # Only prints if no records are found
         if not records:
             print(
                 f"\nNo player pairs found with at least {min_shared} shared "
@@ -280,6 +290,7 @@ class MLBApp:
             )
             return
 
+        # Printing the results to the user
         print(
             f"\nPlayer pairs with ≥ {min_shared} shared team-seasons "
             f"between {start_year}-{end_year}:\n"
@@ -299,100 +310,100 @@ class MLBApp:
     # QUERY 7:
     # Show the ordered path of teams for a player,
     # and other players who followed the same path.
+    # NOTE: This query "works" but due to the limitation of the amount of data, it will be difficult to get a result
+    #       If the database spanned across more years, it would be more likely that the user can find an exact development path.
+    #       To see how the query actually works, I recommend interacting with the database directly, and using the command in the README
     def player_team_path_and_followers(
         self, player_id: str, start_year: int = 2020, end_year: int = 2024
     ):
         """
-        For a given player, show the ordered sequence of teams they played for
-        (between start_year and end_year), and list other players who followed
-        the exact same path over that window.
+        For a given player, show the ordered sequence of TeamSeason IDs and
+        the teams they represent (between start_year and end_year), and list
+        other players who followed the exact same path over that window.
 
-        Uses:
-        (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)-[:IN_SEASON]->(s:Season)
+        This matches the general structure (from README):
+
+            MATCH (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
+            WITH p,
+                 collect(DISTINCT ts.id) AS path,
+                 collect(DISTINCT split(ts.id, "-")[0]) AS teams
+            WITH path, teams, collect(p) AS players
+            WHERE size(teams) > 1
+            ...
+
+        but restricted to the path that includes the user-supplied playerID.
         """
 
-        # First: get the target player's ordered team sequence
-        path_query = """
-        MATCH (p:Player {playerID: $player_id})
+        combined_query = """
+        MATCH (p:Player)
               -[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
               -[:IN_SEASON]->(s:Season)
         WHERE s.year >= $start_year AND s.year <= $end_year
-        WITH p, s.year AS year, ts.teamID AS teamID
-        WITH p, year, collect(DISTINCT teamID)[0] AS teamID
-        ORDER BY year
-        RETURN p.name AS player,
-               p.playerID AS playerID,
-               collect(teamID) AS teamSequence,
-               collect(year) AS yearSequence
+        WITH p, s.year AS year, ts
+        ORDER BY p.playerID, year
+        WITH p, collect(DISTINCT ts) AS tsList
+        WITH p,
+             [t IN tsList | t.id] AS path,
+             [t IN tsList | split(t.id, "-")[0]] AS teams,
+             [t IN tsList | toInteger(split(t.id, "-")[1])] AS years
+        WITH path, teams, years, collect(p) AS players
+        WHERE size(teams) > 1
+        WITH path, teams, years, players
+        WHERE any(pl IN players WHERE pl.playerID = $player_id)
+        WITH path, teams, years, players,
+             [pl IN players WHERE pl.playerID = $player_id][0] AS basePlayer,
+             [pl IN players WHERE pl.playerID <> $player_id] AS otherPlayers
+
+        RETURN
+            basePlayer.name AS basePlayerName,
+            basePlayer.playerID AS basePlayerID,
+            path AS sharedDevelopmentPath,
+            teams AS teamsInPath,
+            years AS yearsInPath,
+            [op IN otherPlayers | op.name] AS followerNames,
+            [op IN otherPlayers | op.playerID] AS followerIDs
         """
 
-        path_records = self._run_query(
-            path_query,
-            player_id=player_id,
-            start_year=start_year,
-            end_year=end_year,
-        )
+        records = self._run_query(combined_query, player_id=player_id, start_year=start_year, end_year=end_year)
 
-        if not path_records:
+        # If nothing comes back, either:
+        #   - the player has no data in this window, or
+        #   - they only ever played for a single team in the window.
+        if not records:
             print(
-                f"\nNo matching team path found for player {player_id} "
+                f"\nNo multi-team development path found for player {player_id} "
                 f"between {start_year}-{end_year}.\n"
             )
             return
 
-        path_rec = path_records[0]
-        team_seq = path_rec["teamSequence"]
-        year_seq = path_rec["yearSequence"]
+        # There should be at most one matching path for this player
+        rec = records[0]
 
-        if not team_seq:
-            print(
-                f"\nPlayer {player_id} has no team history between "
-                f"{start_year}-{end_year}.\n"
-            )
-            return
-
-        # Second: find other players whose ordered team+year sequence matches
-        followers_query = """
-        MATCH (other:Player)
-        WHERE other.playerID <> $player_id
-        MATCH (other)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
-              -[:IN_SEASON]->(s:Season)
-        WHERE s.year >= $start_year AND s.year <= $end_year
-        WITH other, s.year AS year, ts.teamID AS teamID
-        WITH other, year, collect(DISTINCT teamID)[0] AS teamID
-        ORDER BY year
-        WITH other,
-             collect(teamID) AS teamSequence,
-             collect(year) AS yearSequence
-        WHERE teamSequence = $team_seq AND yearSequence = $year_seq
-        RETURN other.name AS name,
-               other.playerID AS playerID
-        ORDER BY name, playerID
-        """
-
-        follower_records = self._run_query(
-            followers_query,
-            player_id=player_id,
-            start_year=start_year,
-            end_year=end_year,
-            team_seq=team_seq,
-            year_seq=year_seq,
-        )
+        base_name = rec["basePlayerName"]
+        base_id = rec["basePlayerID"]
+        path = rec["sharedDevelopmentPath"]      
+        teams = rec["teamsInPath"]              
+        years = rec["yearsInPath"]              
+        follower_names = rec["followerNames"]
+        follower_ids = rec["followerIDs"]
 
         print(
-            f"\nOrdered team path for {path_rec['player']} "
-            f"({path_rec['playerID']}) between {start_year}-{end_year}:\n"
+            f"\nOrdered multi-team development path for {base_name} "
+            f"({base_id}) between {start_year}-{end_year}:\n"
         )
-        steps = [f"{y}:{t}" for y, t in zip(year_seq, team_seq)]
+
+        # Print a nice "year:TEAM" path like "2020:BOS  ->  2021:NYA  ->  ..."
+        steps = [f"{y}:{t}" for y, t in zip(years, teams)]
         print("  Path: " + "  ->  ".join(steps))
 
         print("\nPlayers who followed the same development path:")
-        if follower_records:
-            for f in follower_records:
-                print(f"  - {f['name']} ({f['playerID']})")
+        if follower_ids:
+            for name, pid in zip(follower_names, follower_ids):
+                print(f"  - {name} ({pid})")
         else:
             print("  (no other players with the exact same path)")
         print()
+
 
     # QUERY 8:
     # Manager tree: which players are linked through a manager?
@@ -403,11 +414,12 @@ class MLBApp:
         Player A played for TeamSeason T1 managed by M,
         and M also managed TeamSeason T2 where Player B played.
 
-        Pattern:
+        Uses the structure:
         (p1)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1)<-[:MANAGED]-(m)
              -[:MANAGED]->(ts2)<-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]-(p2)
         """
 
+        # Cypher query that uses the user's input
         query = """
         MATCH (p1:Player {playerID: $p1})
               -[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1:TeamSeason)
@@ -426,6 +438,7 @@ class MLBApp:
         ORDER BY manager, year1, year2
         """
 
+        # Querying the database using the constructed cypher query
         records = self._run_query(query, p1=player_id_1, p2=player_id_2)
         if not records:
             print(
@@ -434,6 +447,7 @@ class MLBApp:
             )
             return
 
+        # Printing the results of the query to the user
         print(
             f"\nManager tree connections between {player_id_1} "
             f"and {player_id_2}:\n"
@@ -476,8 +490,11 @@ class MLBApp:
                 "8. Show manager-tree connections between two players"
             )
             print("q. Quit")
+            
+            # User prompt
             choice = input("Select an option: ").strip().lower()
 
+            # Simple branching used to execute the queries by prompting the user for needed information
             if choice == "1":
                 team_id = input("Enter teamID (e.g. 'BOS'): ").strip().upper()
                 year = int(input("Enter year (e.g. 2023): ").strip())
@@ -523,9 +540,8 @@ class MLBApp:
 
             elif choice == "7":
                 pid = input("Enter playerID: ").strip()
-                # Keeping 2020–2024 window consistent with the dataset you built
                 self.player_team_path_and_followers(
-                    pid, start_year=2020, end_year=2024
+                    pid, start_year=2020, end_year=2024 # Keeping it consistent with the graph structure/data used
                 )
 
             elif choice == "8":
@@ -542,7 +558,7 @@ class MLBApp:
 
 
 if __name__ == "__main__":
-    # CHANGE THESE TO MATCH YOUR PERSONAL ENVIRONMENT
+    # CHANGE THESE TO MATCH YOUR PERSONAL ENVIRONMENT/DATABASE, REFER TO README TO FIND WHERE THESE ARE LOCATED
     URI = "neo4j://127.0.0.1:7687"
     USER = "neo4j"
     PASSWORD = "password"
