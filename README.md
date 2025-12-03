@@ -182,7 +182,7 @@ Undirected, stored one way.
 ```
 (:TeamSeason)-[:PLAYED_HOME_GAMES_AT]->(:Park)
 ```
-#### Schema Diagram
+#### Schema Diagram with Relationships
 ```mermaid
 erDiagram
 
