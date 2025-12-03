@@ -178,6 +178,10 @@ Undirected, stored one way.
 }]->(:Player)
 
 ```
+#### TeamSeason <-> Park
+```
+(:TeamSeason)-[:PLAYED_HOME_GAMES_AT]->(:Park)
+```
 ## Constraints & Indexes
 
 These ensure data integrity and faster queries:
@@ -236,7 +240,7 @@ To directly query the database without using the mlb_app.py application, you can
 MATCH (p:Player {name:"Rafael Devers"})-[:TEAMMATE_WITH]-(t:Player)
 RETURN t.name;
 ```
-**Find how two players are connected (Rafael Devers and Brandon Nimmo**
+**Find how two players are connected (Rafael Devers and Brandon Nimmo)**
 ```
 MATCH path = shortestPath(
 (:Player {name:"Rafael Devers"})-[:TEAMMATE_WITH*1..10]-(:Player {name:"Brandon Nimmo"})
