@@ -301,6 +301,8 @@ It restores:
 7. Select "Browse" and find the .dump file
 8. The instance will now install the database as expected
 
+NOTE: It is possible that you may need to bring the imports to the import tab if you would like to modify the database. You would need to do this specifically if you desire to increase the data coverage range, or if a query that should would gives a response such as "No records, no result." To give your database the context of these files, literally drag and drop them from the Imports directory to the Imports tab in Neo4j.
+
 To directly query the database without using the mlb_app.py application, you can:
 1. Run the instance
 2. Select the Query Tool from the left tab
