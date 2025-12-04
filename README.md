@@ -364,7 +364,7 @@ LIMIT 1;
 ```
 ## Using the mlb_app.py File
 
-1. Navigate to the NoSQL-Final-Project directory
+1. Navigate to the NoSQL-Final-Project directory that includes the database and code
 2. Modify the mlb_app.py file
 	1. Change the URI to match that of your instance
 	2. Change the USER to match that of your instance
