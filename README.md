@@ -313,11 +313,13 @@ To directly query the database without using the mlb_app.py application, you can
 
 **Find all teammates of Rafael Devers**
 ```
+// Enables the traversal of the graph to locate instances with the following pattern
 MATCH (p:Player {name:"Rafael Devers"})-[:TEAMMATE_WITH]-(t:Player)
 RETURN t.name;
 ```
 **Find how two players are connected (Rafael Devers and Brandon Nimmo)**
 ```
+// Uses traversal of the graph but takes advantage of the shortestPath() function to return a connection with the least hops
 MATCH path = shortestPath(
 (:Player {name:"Rafael Devers"})-[:TEAMMATE_WITH*1..10]-(:Player {name:"Brandon Nimmo"})
 )
@@ -325,17 +327,23 @@ RETURN path;
 ```
 **Find 10 players who share the same team path (minimum of 2 different teams)**
 ```
+// 
 MATCH (p:Player)-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts:TeamSeason)
 WITH p,
-     collect(DISTINCT ts.id) AS path,
-     collect(DISTINCT split(ts.id, "-")[0]) AS teams
+     collect(DISTINCT ts.id) AS path,				
+     collect(DISTINCT split(ts.id, "-")[0]) AS teams // Filtering just based on the teamID and not TeamSeasonID
+
+// Group players by their shared paths and team combinations
 WITH path, teams, collect(p) AS players
+// Only keep the players who share more than one team
 WHERE size(players) > 1
   AND size(teams) > 1
 UNWIND players AS p1
 UNWIND players AS p2
+// Keeping the players as a pair, but only if they dont share the same playerID
 WITH p1, p2, path, teams
 WHERE id(p1) < id(p2)
+// Print statement
 RETURN
   p1.name  AS player1,
   p2.name  AS player2,
@@ -347,6 +355,8 @@ LIMIT 10;
 ```
 **Find how Mike Trout and Lucas Giolito might be connected by a manager**
 ```
+// Matches the first player's manager for a given year, to the same manager for the next player.
+// Searches all manager options connected to both players
 MATCH (p1:Player {name:"Mike Trout"})-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts1)<-[:MANAGED]-(m:Manager),
 (p2:Player {name:"Lucas Giolito"})-[:BATTED_FOR|PITCHED_FOR|FIELDED_FOR]->(ts2)<-[:MANAGED]-(m)
 RETURN m.name, p1.name, p2.name, ts1.year, ts2.year
